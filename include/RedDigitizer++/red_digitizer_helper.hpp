@@ -301,7 +301,7 @@ struct ChannelsMask {
     }
 
     [[nodiscard]] const bool& at(const std::size_t& iter) const {
-        if(iter > kNumCHs) {
+        if(iter >= kNumCHs) {
             throw std::invalid_argument("iter is higher than 8.");
         }
 
@@ -1251,11 +1251,6 @@ void CAEN<T, N>::Setup(const CAENGlobalConfig& global_config,
 
         WriteBits(kGPOAddr, group_mask, 0, 4); // Write group mask to GPO
 
-        _err_code = CAEN_DGTZ_SetGroupSelfTrigger(handle,
-                                                  _global_config.CHTriggerMode,
-                                                  group_mask);
-        _print_if_err("CAEN_DGTZ_SetGroupSelfTrigger", __FUNCTION__);
-
         for (std::size_t grp_n = 0; grp_n < num_grps; grp_n++) {
             auto gr_config = gr_configs[grp_n];
             // Trigger stuff
@@ -1273,7 +1268,7 @@ void CAEN<T, N>::Setup(const CAENGlobalConfig& global_config,
             _print_if_err("CAEN_DGTZ_SetGroupDCOffset", __FUNCTION__);
 
             // Set the mask for channels enabled for self-triggering
-            auto trig_mask = gr_config.TriggerMask.get();
+            uint32_t trig_mask = gr_config.TriggerMask.get();
             _err_code = CAEN_DGTZ_SetChannelGroupMask(handle,
                                                       grp_n,
                                                       trig_mask);
@@ -1299,6 +1294,11 @@ void CAEN<T, N>::Setup(const CAENGlobalConfig& global_config,
             }
             WriteRegister(0x10C4 | (grp_n << 8), word);
         }
+
+        _err_code = CAEN_DGTZ_SetGroupSelfTrigger(handle,
+                                            _global_config.CHTriggerMode,
+                                            group_mask);
+        _print_if_err("CAEN_DGTZ_SetGroupSelfTrigger", __FUNCTION__);
 
         bool trg_out = false;
         // TODO(Any): these configuration bits look like more complex than they
